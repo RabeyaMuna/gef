@@ -23,6 +23,7 @@ class ShellcodeCommand(RemoteGefUnitTestGeneric):
         cmd = f"shellcode search execve {BIN_SH}"
         gdb.execute("start")
         res = gdb.execute(cmd, to_string=True)
+        self.assertNotIn("[!] Could not query search page", res)
         self.assertIn(f"setuid(0) + execve({BIN_SH}) 49 bytes", res)
 
     @pytest.mark.online
@@ -31,6 +32,7 @@ class ShellcodeCommand(RemoteGefUnitTestGeneric):
         gdb = self._gdb
         gdb.execute("start")
         res = gdb.execute("shellcode get 77", to_string=True)
+        self.assertNotIn("[!] Failed to fetch shellcode #77", res)
         self.assertIn("Shellcode written to ", res)
 
     @pytest.mark.online

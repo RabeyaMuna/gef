@@ -1,36 +1,32 @@
 name: CI Test for GEF
 
-on:
-  push:
-    branches:
-      - main
-
-  pull_request:
-    branches:
-      - main
-
+on: push
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-22.04
-          - ubuntu-20.04
-    name: "Run Unit tests on ${{ matrix.os }}"
+        - ubuntu-22.04
+        - ubuntu-24.04
+    name: Run Unit tests on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    services:
+      pypi_wayback:
+        image: ghcr.io/waleko/pypi-wayback
+        ports:
+        - 8629:8080
     defaults:
       run:
         shell: bash
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install python and toolchain
       run: |
         sudo apt-get update
         sudo apt-get install -y gdb-multiarch python3-dev python3-pip python3-wheel python3-setuptools git cmake gcc g++ pkg-config libglib2.0-dev gdbserver qemu-user
-        sudo python3 -m pip install --upgrade pip
 
     - name: Set runtime environment variables
       run: |
@@ -40,14 +36,14 @@ jobs:
         echo GEF_CI_CACHE_DIR=`python3 -m pip cache dir` >> $GITHUB_ENV
 
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: cache-deps
       env:
         cache-name: cache-deps
       with:
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         path: ${{ env.GEF_CI_CACHE_DIR }}
-        restore-keys:
+        restore-keys: |
           ${{ runner.os }}-pip-${{ env.cache-name }}-
           ${{ runner.os }}-pip-
           ${{ runner.os }}-${{ env.cache-name }}-
@@ -67,3 +63,7 @@ jobs:
       run: |
         make -C tests/binaries -j ${{ env.GEF_CI_NB_CPU }}
         python${{ env.PY_VER }} -m pytest --forked -n ${{ env.GEF_CI_NB_CPU }} -v -k "not benchmark" tests/
+
+env:
+  PIP_INDEX_URL: http://localhost:8629/2024-01-20
+  UV_INDEX_URL: http://localhost:8629/2024-01-20
